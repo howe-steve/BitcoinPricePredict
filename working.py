@@ -17,6 +17,19 @@ df = pd.read_csv('bitcoin.csv')
 df['Date'] = pd.to_datetime(df['Date'])
 df.set_index('Date', inplace=True)
 
+# Separate the last data point
+# THIS REMOVES THE POINT WE'RE TRYING TO PREDICT FROM THE MODEL
+# Toggle to include or exclude the last data point
+include_last_data = True
+
+if include_last_data:
+    # Extract the last row (last data point)
+    last_data = df.iloc[-1:]
+else:
+    # Extract the last row (last data point) and remove it from the dataset
+    last_data = df.iloc[-1:]  # Extract the last row, which will be used for prediction
+    df = df.iloc[:-1]  # Remove the last row from the dataset so it is not included in training
+
 # Prepare the data for candlestick chart and model
 candlestick_data = df[['Open', 'High', 'Low', 'Close']]
 prices = df['Adj Close'].values
@@ -44,49 +57,23 @@ try:
     print("Model loaded successfully.")
 except IOError:
     print("No saved model found. Training a new model.")
+
+    # Define the model
     model = Sequential()
     model.add(LSTM(units=50, return_sequences=True, input_shape=(X.shape[1], 1)))
     model.add(LSTM(units=50, return_sequences=False))
     model.add(Dense(units=25))
     model.add(Dense(units=1))
+
+    # Compile the model
     model.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Train the model
     model.fit(X, y, batch_size=1, epochs=50)
+
+    # Save the trained model
     model.save(model_file)
     print("Model trained and saved.")
-
-# Function for incremental training
-def incremental_training(new_data, model, scaler, look_back=60, epochs=10, batch_size=1):
-    # Prepare the new data
-    prices = new_data['Adj Close'].values
-    prices = prices.reshape(-1, 1)
-    scaled_prices = scaler.transform(prices)
-
-    # Prepare the new training data
-    X_new, y_new = [], []
-    for i in range(look_back, len(scaled_prices)):
-        X_new.append(scaled_prices[i - look_back:i, 0])
-        y_new.append(scaled_prices[i, 0])
-    X_new, y_new = np.array(X_new), np.array(y_new)
-    X_new = np.reshape(X_new, (X_new.shape[0], X_new.shape[1], 1))
-
-    # Recreate the optimizer
-    optimizer = tf.keras.optimizers.Adam()
-
-    # Recompile the model with the new optimizer
-    model.compile(optimizer=optimizer, loss='mean_squared_error')
-
-    # Train the model incrementally
-    model.fit(X_new, y_new, batch_size=batch_size, epochs=epochs)
-
-    # Save the updated model
-    model.save(model_file)
-    print("Model updated and saved.")
-
-# Example usage of incremental training
-new_data = pd.read_csv('new_bitcoin_data.csv')
-new_data['Date'] = pd.to_datetime(new_data['Date'])
-new_data.set_index('Date', inplace=True)
-incremental_training(new_data, model, scaler)
 
 # Prepare the data for prediction
 last_scaled_data = scaled_prices[-look_back:]
@@ -97,9 +84,9 @@ predicted_price_scaled = model.predict(last_scaled_data)
 predicted_price = scaler.inverse_transform(predicted_price_scaled)
 
 # Compare with actual last data point
-actual_last_price = df['Adj Close'].values[-1]
-print(f"Predicted Price: {predicted_price[0][0]}")
-print(f"Actual Last Price: {actual_last_price}")
+actual_last_price = last_data['Adj Close'].values[0]
+print(f"Tomorrow's Predicted Price: {predicted_price[0][0]}")
+print(f"Today's Last Price: {actual_last_price}")
 
 # Create an interactive candlestick chart using Plotly
 candlestick = go.Figure(data=[go.Candlestick(x=candlestick_data.index,
