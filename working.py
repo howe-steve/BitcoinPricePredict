@@ -18,8 +18,7 @@ df['Date'] = pd.to_datetime(df['Date'])
 df.set_index('Date', inplace=True)
 
 # Separate the last data point
-# THIS REMOVES THE POINT WE'RE TRYING TO PREDICT FROM THE MODEL
-# Toggle to include or exclude the last data point
+# Toggle to include or exclude the last data point, False for Exclude
 include_last_data = True
 
 if include_last_data:
