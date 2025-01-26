@@ -1,5 +1,5 @@
 # Bitcoin Price Prediction
-
+(Please don't use this for trading)
 This project predicts **_today's_** price of Bitcoin using an LSTM (Long Short-Term Memory) neural network model. The model is trained using historical Bitcoin price data, and predictions are visualized with an interactive candlestick chart.
 
 ## Overview
